@@ -1,0 +1,7 @@
+# digitalocean:
+#   credentials: API_KEY
+
+# subdomain: SUBDOMAIN_FOR_WILDCARD
+
+# traefik:
+#   resolverName: wildcard

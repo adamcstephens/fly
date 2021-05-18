@@ -1,0 +1,22 @@
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: traefik-dashboard
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: Host(`proxy.{{ required "A valid .Values.subdomain entry required!" .Values.subdomain }}`)
+      kind: Rule
+      middlewares:
+        - name: traefik-forward-auth
+          namespace: '{{ .Release.Namespace }}'
+      services:
+        - name: api@internal
+          kind: TraefikService
+  tls:
+    certResolver: "{{ .Values.traefik.resolverName }}"
+    domains:
+      - main: '{{ required "A valid .Values.subdomain entry required!" .Values.subdomain }}'
+        sans:
+          - '*.{{ required "A valid .Values.subdomain entry required!" .Values.subdomain }}'

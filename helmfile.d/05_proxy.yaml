@@ -1,0 +1,100 @@
+repositories:
+  - name: k8s-at-home
+    url: https://k8s-at-home.com/charts/
+  - name: traefik
+    url: https://helm.traefik.io/traefik
+
+releases:
+  - name: traefik
+    namespace: traefik
+    chart: traefik/traefik
+    version: ~9.19.0
+    values:
+      - additionalArguments:
+          - --global.checknewversion=false
+          - --global.sendAnonymousUsage=false
+          - --api.insecure
+          - --accesslog
+          - --log.level=WARN
+          # - --certificatesresolvers.wildcard.acme.caserver=https://acme-staging-v02.api.letsencrypt.org/directory
+          - --certificatesresolvers.wildcard.acme.email={{ requiredEnv "FLY_ACME_EMAIL" }}
+          - --certificatesresolvers.wildcard.acme.storage=/certs/acme.json
+          - --certificatesresolvers.wildcard.acme.dnschallenge.provider=digitalocean
+          - --certificatesresolvers.wildcard.acme.dnschallenge.delaybeforecheck=0
+          - --certificatesresolvers.wildcard.acme.dnschallenge.resolvers={{ env "FLY_ACME_RESOLVERS" | default "1.1.1.1:53,8.8.8.8:53" }}
+      - ports:
+          web:
+            redirectTo: websecure
+      - env:
+          - name: DO_AUTH_TOKEN
+            valueFrom:
+              secretKeyRef:
+                key: apiKey
+                name: digitalocean-api-credentials
+      - ingressRoute:
+          dashboard:
+            enabled: false
+      - persistence:
+          enabled: true
+          path: /certs
+          size: 128Mi
+
+  - name: fly-proxy
+    namespace: traefik
+    chart: ../charts/fly-proxy
+    needs:
+      - traefik
+    values:
+      - digitalocean:
+          credentials: '{{ requiredEnv "FLY_DO_TOKEN" }}'
+      - oauth:
+          clientId: '{{ requiredEnv "FLY_OAUTH_CLIENT_ID" }}'
+          clientSecret: '{{ requiredEnv "FLY_OAUTH_CLIENT_SECRET" }}'
+      - forwardAuth:
+          cookieSigningSecret: '{{ requiredEnv "FLY_COOKIE_SIGNING_SECRET" }}'
+          cookieSecret: '{{ requiredEnv "FLY_COOKIE_SECRET" }}'
+      - subdomain: '{{ requiredEnv "FLY_SUBDOMAIN" }}'
+      - traefik:
+          resolverName: wildcard
+
+  - name: traefik-forward-auth
+    namespace: traefik
+    chart: k8s-at-home/traefik-forward-auth
+    version: ~1.0.10
+    needs:
+      - fly-proxy
+    values:
+      - authHost: 'auth.{{ requiredEnv "FLY_SUBDOMAIN" }}'
+      - cookie:
+          domain: '{{ requiredEnv "FLY_SUBDOMAIN" }}'
+      - default:
+          provider: generic-oauth
+      - env:
+          - name: PROVIDERS_GENERIC_OAUTH_CLIENT_ID
+            valueFrom:
+              secretKeyRef:
+                key: clientId
+                name: traefik-forward-auth-generic-oauth
+          - name: PROVIDERS_GENERIC_OAUTH_CLIENT_SECRET
+            valueFrom:
+              secretKeyRef:
+                key: clientSecret
+                name: traefik-forward-auth-generic-oauth
+          - name: COOKIE_SECRET
+            valueFrom:
+              secretKeyRef:
+                key: cookieSecret
+                name: traefik-forward-auth-generic-oauth
+          - name: SECRET
+            valueFrom:
+              secretKeyRef:
+                key: cookieSigningSecret
+                name: traefik-forward-auth-generic-oauth
+      - logging:
+          level: info
+      - providers:
+          genericOauth:
+            enabled: true
+            authUrl: '{{ requiredEnv "FLY_OAUTH_AUTH_URL" }}'
+            tokenUrl: '{{ requiredEnv "FLY_OAUTH_TOKEN_URL" }}'
+            userUrl: '{{ requiredEnv "FLY_OAUTH_USER_URL" }}'

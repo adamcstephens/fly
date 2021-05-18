@@ -1,0 +1,23 @@
+releases:
+  - name: kanboard
+    namespace: kanboard
+    chart: k8s-at-home/kanboard
+    version: ~2.5.0
+    labels:
+      app: kanboard
+    values:
+      - ingress:
+          enabled: true
+          annotations:
+            traefik.ingress.kubernetes.io/router.entrypoints: websecure
+            traefik.ingress.kubernetes.io/router.tls.certresolver: wildcard
+            # traefik.ingress.kubernetes.io/router.middlewares: traefik-traefik-forward-auth@kubernetescrd
+          hosts:
+            - host: kanboard.{{ requiredEnv "FLY_SUBDOMAIN" }}
+              paths:
+                - path: /
+      - persistence:
+          data:
+            enabled: true
+            size: 1Gi
+            skipuninstall: true

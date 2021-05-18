@@ -1,0 +1,24 @@
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: fly-app-{{ required "A valid .Values.name entry required!" .Values.name }}
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: Host(`{{ required "A valid .Values.name entry required!" .Values.name }}.{{ required "A valid .Values.subdomain entry required!" .Values.subdomain }}`)
+      kind: Rule
+      {{ if .Values.auth }}
+      middlewares:
+        - name: {{ required "A valid .Values.auth.name entry required!" .Values.auth.name }}
+          namespace: {{ required "A valid .Values.auth.namespace entry required!" .Values.auth.namespace }}
+      {{ end }}
+      services:
+        - name: {{ required "A valid .Values.service.name entry required!" .Values.service.name }}
+          port: {{ required "A valid .Values.service.port entry required!" .Values.service.port }}
+  tls:
+    certResolver:  {{ required "A valid .Values.traefik.resolverName entry required!" .Values.traefik.resolverName }}
+    domains:
+      - main: {{ required "A valid .Values.subdomain entry required!" .Values.subdomain }}
+        sans:
+          - '*.{{ required "A valid .Values.subdomain entry required!" .Values.subdomain }}'
