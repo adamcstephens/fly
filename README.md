@@ -10,6 +10,7 @@ Features:
 * Single host
 * Let's Encrypt Wildcard certificate
 * Simple TLS setup for applications
+* Simple authentication setup for applications
 
 ## Setup
 
