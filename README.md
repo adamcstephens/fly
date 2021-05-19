@@ -5,12 +5,11 @@
 This is an opinionated take on a relatively simple kubernetes cluster. It can be used to stand up a k3s cluster
 with automatic TLS encrypted services, using a wildcard domain and certificate. (e.g. https://*.sub.my.domain)
 
-This project thinks:
+Features:
 
-* Abstractions are ok
-* Boring is better
-* Simple is good (funny for a k8s project)
-* Declarative where possible
+* Single host
+* Let's Encrypt Wildcard certificate
+* Simple TLS setup for applications
 
 ## Setup
 
